@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("CUSTOMER")
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+
+  @@map("users")
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  products  Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  categoryId  String
+  name        String
+  description String?     @db.Text
+  price       Int
+  image       String?     @db.Text
+  available   Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orderItems  OrderItem[]
+  category    Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId], map: "products_categoryId_fkey")
+  @@map("products")
+}
+
+model Order {
+  id               String            @id @default(cuid())
+  orderNumber      String            @unique
+  userId           String?
+  customerName     String
+  customerPhone    String?
+  total            Int
+  status           String            @default("PENDING")
+  paymentMethod    String            @default("CASH")
+  paymentStatus    String            @default("PENDING")
+  notes            String?           @db.Text
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  whatsappLastSent DateTime?
+  whatsappStatus   String?           @default("PENDING")
+  notifications    NotificationLog[]
+  items            OrderItem[]
+  user             User?             @relation(fields: [userId], references: [id])
+
+  @@index([userId], map: "orders_userId_fkey")
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Int
+  subtotal  Int
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId], map: "order_items_orderId_fkey")
+  @@index([productId], map: "order_items_productId_fkey")
+  @@map("order_items")
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model NotificationLog {
+  id             String   @id @default(cuid())
+  orderId        String?
+  recipientPhone String
+  recipientType  String   @default("ADMIN")
+  type           String
+  message        String   @db.Text
+  status         String   @default("SENT")
+  errorMessage   String?  @db.Text
+  createdAt      DateTime @default(now())
+  order          Order?   @relation(fields: [orderId], references: [id])
+
+  @@index([orderId], map: "notification_logs_orderId_fkey")
+  @@map("notification_logs")
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  phone     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+  @@map("otp_codes")
+}
